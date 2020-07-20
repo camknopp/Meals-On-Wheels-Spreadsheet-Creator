@@ -8,9 +8,7 @@ clnt = client.Client(key=api_key)
 
 geolocator = Nominatim(user_agent='Meals On Wheels Route')
 
-startpoint = geolocator.geocode("7 jencks road milford ma")
-
-locs_addresses = ['hopkinton ma', 'ashland ma', 'holliston ma', 'east boston ma']
+locs_addresses = ['milford ma', 'boston ma', 'hopkinton ma']
 locs_coords = []
 
 for loc in locs_addresses:
@@ -27,35 +25,57 @@ print("Calculated {}x{} routes.".format(len(locs_matrix['durations']),len(locs_m
 def getDistance(from_id, to_id):
     return int(locs_matrix['durations'][from_id][to_id])
 
-tsp_size = len(locs_addresses)
+# tsp_size = len(locs_addresses)
+tsp_size = len(locs_matrix)
 num_routes = 1
 start = 0
 
 optimal_coords = []
 
 if tsp_size > 0:
-    routing = pywrapcp.RoutingModel(tsp_size, num_routes, start)
-    search_parameters = pywrapcp.RoutingModel.DefaultSearchParameters()
+    manager = pywrapcp.RoutingIndexManager(tsp_size,
+                                       num_routes, start)
+    # routing = pywrapcp.RoutingModel(tsp_size, num_routes, start)
+    routing = pywrapcp.RoutingModel(manager)
+    # search_parameters = pywrapcp.RoutingModel.DefaultSearchParameters()
 
     # Create the distance callback, which takes two arguments (the from and to node indices)
     # and returns the distance between these nodes.
-    dist_callback = getDistance
+    # dist_callback = getDistance
+    dist_callback = routing.RegisterTransitCallback(getDistance)
     routing.SetArcCostEvaluatorOfAllVehicles(dist_callback)
+    search_parameters = pywrapcp.DefaultRoutingSearchParameters()
+    search_parameters.first_solution_strategy = (routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC)
+
     # Solve, returns a solution if any.
-    assignment = routing.SolveWithParameters(search_parameters)
-    if assignment:
+    solution = routing.SolveWithParameters(search_parameters)
+
+    if solution:
         # Total cost of the 'optimal' solution.
-        print("Total duration: " + str(round(assignment.ObjectiveValue(), 3) / 60) + " minutes\n")
+        print("Total duration: " + str(round(solution.ObjectiveValue(), 3) / 60) + " minutes\n")
         index = routing.Start(start) # Index of the variable for the starting node.
         route = ''
 #         while not routing.IsEnd(index):
         for node in range(routing.nodes()):
-            optimal_coords.append(locs_coords[routing.IndexToNode(index)])
-            route += str(locs_addresses[routing.IndexToNode(index)]) + ' -> '
-            index = assignment.Value(routing.NextVar(index))
-        route += str(locs_addresses[routing.IndexToNode(index)])
-        optimal_coords.append(locs_coords[routing.IndexToNode(index)])
+            optimal_coords.append(locs_coords[manager.IndexToNode(index)])
+            route += str(locs_addresses[manager.IndexToNode(index)]) + ' -> '
+            index = solution.Value(routing.NextVar(index))
+        route += str(locs_addresses[manager.IndexToNode(index)])
+        optimal_coords.append(locs_coords[manager.IndexToNode(index)])
         print("Route:\n" + route)
+
+request = {'coordinates': optimal_coords,
+           'profile': 'driving-car',
+           'geometry': 'true',
+           'format_out': 'geojson',
+          }
+request['coordinates'] = optimal_coords
+optimal_route = clnt.directions(**request)
+
+optimal_duration = 0
+optimal_duration = optimal_route['features'][0]['properties']['summary']['duration'] / 60
+print("Route duration is {}".format(optimal_duration))
+
 
 
 
