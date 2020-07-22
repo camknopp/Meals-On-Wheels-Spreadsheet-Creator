@@ -18,10 +18,23 @@ for loc in locs_addresses:
     locs_coords.append((curr.longitude, curr.latitude))
 
 # create folium map
-m = folium.Map(location=locs_coords[0], zoom_start=12)
-m.save('map.html')
+m = folium.Map(location=(locs_coords[0][1], locs_coords[0][0]), zoom_start=12)
+
+# Global tooltip
+tooltip = 'Click for more info'
+
+i = 1
+for coord in locs_coords:
+    folium.Marker([coord[1],coord[0]],
+                popup='<strong>{}</strong>'.format(i),
+                tooltip=tooltip).add_to(m)
+    i+=1
+
 
 # generate optimal route in GeoJSON format
 routes = clnt.directions(locs_coords, format='geojson', profile='driving-car', optimize_waypoints=True)
 
+folium.GeoJson(routes, name='Meals on Wheels').add_to(m)
+
+m.save('map.html')
 print(routes)
