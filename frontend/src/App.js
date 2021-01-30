@@ -1,25 +1,33 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useState } from "react"
+import "./App.css"
+import { Collapse } from "react-collapse"
+
+/*
+This app will give an easy to use 
+*/
 
 function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+  let [showForm, setShowForm] = useState(false)
+
+	return (
+		<div>
+			<h1>Meals on Wheels Spreadsheet Creator</h1>
+			<div onClick={(e) => {
+        e.preventDefault()
+        setShowForm(!showForm)
+      }}>
+        click here
+      </div>
+        
+				<Collapse isOpened={showForm}>
+					<form>
+						Enter data:
+						<input type="text" name="name" />
+					</form>
+				</Collapse>
+			
+		</div>
+	)
 }
 
-export default App;
+export default App
